@@ -291,7 +291,16 @@ def dashboard_page(mcp_url: str) -> str:
                 cells.append({"ratio": r["대비"].split(":")[0]} if "대비" in r else None)
         contrast.append({"name": t["이름"], "use": t.get("쓰는 곳", ""), "light": t.get("라이트", ""), "cells": cells})
 
+    # 컬러 시스템: 색 값(#RRGGBB · #RRGGBBAA)이 들어 있는 토큰 전부
+    colors = [
+        {"name": t["이름"], "kind": t.get("종류", ""), "light": t["라이트"], "dark": t.get("다크", ""),
+         "use": t.get("쓰는 곳", ""), "rule": t.get("규칙", "")}
+        for t in tokens
+        if HEX.match(t.get("라이트", "")) and HEX.match(t.get("다크", ""))
+    ]
+
     data = {
+        "colors": colors,
         "generated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M (KST)"),
         "progress": design_progress(),
         "screens": read_csv(SCREENS_CSV),

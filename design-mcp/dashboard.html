@@ -57,6 +57,29 @@
   code { font-family: ui-monospace, Consolas, monospace; font-size: 0.92em; }
   .tip { position: fixed; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px;
          padding: 6px 10px; border-radius: 6px; display: none; z-index: 10; }
+  .color-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .color-filter button { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+                         border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .color-filter button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .group-title { font-size: 14px; color: var(--muted); font-weight: 600; margin: 18px 0 8px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .chip { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .chip .pair { display: grid; grid-template-columns: 1fr 1fr; height: 72px; }
+  .chip .base { position: relative; }
+  .chip .base.light { background: #ffffff; } .chip .base.dark { background: #1b1c1e; }
+  .chip .fill { position: absolute; inset: 0; }
+  .chip .fill.line { inset: auto 10px 50% 10px; height: 3px; border-radius: 2px; }
+  .chip .tag { position: absolute; left: 8px; bottom: 6px; font-size: 11px; padding: 0 6px; border-radius: 4px;
+               background: rgba(255,255,255,.85); color: #171719; }
+  .chip .base.dark .tag { background: rgba(0,0,0,.6); color: #f7f7f8; }
+  .chip .body { padding: 10px 12px 12px; }
+  .chip .name { font: 600 14px ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+  .chip .hexes { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
+  .chip .hex { font: 12px ui-monospace, Consolas, monospace; padding: 2px 7px; border-radius: 6px; cursor: pointer;
+               border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .chip .hex:hover { border-color: var(--brand); }
+  .chip .use { font-size: 13px; }
+  .chip .rule { font-size: 12px; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
 </style>
 </head>
 <body>
@@ -77,6 +100,11 @@
 
   <h2>화면 목록</h2>
   <div class="table-wrap"><table id="screens"></table></div>
+
+  <h2>컬러 시스템 <span class="muted">(design_tokens.csv · 색 값을 누르면 복사돼요)</span></h2>
+  <div class="color-filter" id="colorFilter"></div>
+  <div id="colors"></div>
+  <p class="muted">각 견본은 그 모드의 페이지 배경(라이트 #FFFFFF · 다크 #1B1C1E) 위에 칠해서, 반투명 색도 실제 화면에서 보이는 모습 그대로 보여요.</p>
 
   <h2>글자색 대비 점검 <span class="muted">(WCAG 2.1 · 본문 4.5 / 큰 글자 3.0)</span></h2>
   <div class="table-wrap"><table id="contrast"></table></div>
@@ -141,6 +169,48 @@
         "<td>" + (r["개발 넘김"] === "넘김" ? "✓ 넘김" : "대기") + "</td>" +
         "<td>" + esc(r["쓰는 컴포넌트"]) + '</td><td class="muted">' + esc(r["메모"]) + "</td></tr>";
     }).join("");
+
+  // 컬러 시스템 (종류별 묶음 + 거르기 버튼)
+  var KINDS = ["색", "글자색", "배경", "선", "참고 팔레트"];
+  var KIND_LABEL = { "색": "의미 색 (상태 · 강조)", "글자색": "글자색", "배경": "배경", "선": "선", "참고 팔레트": "참고 팔레트" };
+  var kinds = KINDS.filter(function (k) { return DATA.colors.some(function (c) { return c.kind === k; }); });
+  var current = "전체";
+  function renderColors() {
+    var shown = current === "전체" ? kinds : [current];
+    document.getElementById("colors").innerHTML = shown.map(function (k) {
+      var items = DATA.colors.filter(function (c) { return c.kind === k; });
+      return '<div class="group-title">' + esc(KIND_LABEL[k] || k) + " · " + items.length + '개</div><div class="swatches">' +
+        items.map(function (c) {
+          var cls = c.kind === "선" ? "fill line" : "fill";
+          return '<div class="chip"><div class="pair">' +
+            '<div class="base light"><div class="' + cls + '" style="background:' + esc(c.light) + '"></div><span class="tag">라이트</span></div>' +
+            '<div class="base dark"><div class="' + cls + '" style="background:' + esc(c.dark) + '"></div><span class="tag">다크</span></div>' +
+            '</div><div class="body"><div class="name">' + esc(c.name) + '</div><div class="hexes">' +
+            '<button type="button" class="hex" data-hex="' + esc(c.light) + '" title="라이트 값 복사">L ' + esc(c.light) + "</button>" +
+            '<button type="button" class="hex" data-hex="' + esc(c.dark) + '" title="다크 값 복사">D ' + esc(c.dark) + "</button>" +
+            '</div><div class="use">' + esc(c.use) + "</div>" + (c.rule ? '<div class="rule"><b>규칙</b> · ' + esc(c.rule) + "</div>" : "") +
+            "</div></div>";
+        }).join("") + "</div>";
+    }).join("");
+  }
+  var filter = document.getElementById("colorFilter");
+  filter.innerHTML = ["전체"].concat(kinds).map(function (k) {
+    return '<button type="button" data-kind="' + esc(k) + '" aria-pressed="' + (k === current) + '">' + esc(k) + "</button>";
+  }).join("");
+  filter.onclick = function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    current = b.getAttribute("data-kind");
+    filter.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
+    renderColors();
+  };
+  document.getElementById("colors").onclick = function (e) {
+    var b = e.target.closest(".hex"); if (!b) return;
+    var v = b.getAttribute("data-hex"), old = b.textContent;
+    try {
+      navigator.clipboard.writeText(v).then(function () { b.textContent = "복사됨 ✓"; setTimeout(function () { b.textContent = old; }, 1200); });
+    } catch (err) {}
+  };
+  renderColors();
 
   // 대비 표
   function cell(c) {
