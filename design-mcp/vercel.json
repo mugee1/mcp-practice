@@ -1,6 +1,9 @@
 {
   "functions": {
-    "api/index.py": { "includeFiles": "{design_server.py,guide.html,design_tokens.csv,screens.csv,docs/**}" }
+    "api/index.py": { "includeFiles": "{design_server.py,guide.html,dashboard.html,design_tokens.csv,screens.csv,docs/**}" }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
+  "rewrites": [
+    { "source": "/dashboard", "destination": "/api/index?page=dashboard" },
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
 }

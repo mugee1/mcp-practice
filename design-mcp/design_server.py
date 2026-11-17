@@ -270,6 +270,39 @@ def design_progress() -> dict:
     }
 
 
+# ── 대시보드: 같은 자료로 진행 현황 · 대비 점검을 한 화면에 ─────────────────────
+def dashboard_page(mcp_url: str) -> str:
+    """dashboard.html 에 지금 자료로 계산한 숫자를 채워 돌려줘요. 열 때마다 CSV 를 새로 읽어요."""
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    tokens = read_csv(TOKENS_CSV)
+    text_tokens = [t for t in tokens if t.get("종류") in ("색", "글자색", "참고 팔레트")]
+    backgrounds = [("기본 배경", "background.neutral.primary"), ("요약 카드", "background.neutral.secondary")]
+    columns, contrast = [], []
+    for mode in ("라이트", "다크"):
+        for label, _ in backgrounds:
+            columns.append(f"{mode} · {label}")
+    for t in text_tokens:
+        cells = []
+        for mode in ("라이트", "다크"):
+            for _, bg in backgrounds:
+                r = check_contrast(t["이름"], bg, mode)
+                cells.append({"ratio": r["대비"].split(":")[0]} if "대비" in r else None)
+        contrast.append({"name": t["이름"], "use": t.get("쓰는 곳", ""), "light": t.get("라이트", ""), "cells": cells})
+
+    data = {
+        "generated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M (KST)"),
+        "progress": design_progress(),
+        "screens": read_csv(SCREENS_CSV),
+        "contrast_columns": columns,
+        "contrast": contrast,
+    }
+    blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")  # <script> 안에 안전하게 넣기
+    page = (BASE / "dashboard.html").read_text(encoding="utf-8")
+    return page.replace("__DATA__", blob).replace("__MCP_URL__", mcp_url)
+
+
 # ── 원격(HTTP) 실행: 주소 하나로 여러 사람이 같이 써요 ──────────────────────────
 def http_app():
     """인터넷 주소(/mcp)로 접속하는 웹 앱을 만들어요. Vercel 같은 곳에 올릴 때 써요.
@@ -292,10 +325,16 @@ def http_app():
         if scope["type"] == "http" and scope.get("method") == "GET":
             headers = dict(scope.get("headers") or [])
             accept = headers.get(b"accept", b"").decode().lower()
-            if "text/html" in accept and "text/event-stream" not in accept:
+            query = parse_qs(scope.get("query_string", b"").decode())
+            wants_dashboard = scope.get("path", "").rstrip("/").endswith("/dashboard") or query.get("page") == ["dashboard"]
+            if wants_dashboard or ("text/html" in accept and "text/event-stream" not in accept):
                 host = headers.get(b"host", b"").decode()
                 proto = headers.get(b"x-forwarded-proto", b"").decode() or ("http" if host.startswith(("127.", "localhost")) else "https")
-                page = (BASE / "guide.html").read_text(encoding="utf-8").replace("__URL__", f"{proto}://{host}/mcp")
+                mcp_url = f"{proto}://{host}/mcp"
+                if wants_dashboard:  # /dashboard → 디자인 현황판
+                    page = dashboard_page(mcp_url)
+                else:  # 그 밖에 브라우저로 열면 → 사용법 안내
+                    page = (BASE / "guide.html").read_text(encoding="utf-8").replace("__URL__", mcp_url)
                 await send({"type": "http.response.start", "status": 200,
                             "headers": [(b"content-type", b"text/html; charset=utf-8")]})
                 await send({"type": "http.response.body", "body": page.encode()})

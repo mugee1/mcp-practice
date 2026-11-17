@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>디자인 현황판</title>
+<style>
+  :root {
+    --bg: #ffffff; --surface: #f7f7f8; --text: #171719; --muted: #5a5c63; --line: #e1e2e4;
+    --brand: #0066ff;
+    --st-plan: #8a8c93; --st-doing: #0066ff; --st-done: #009632; --st-fix: #e52222;
+    --ok-bg: #e6f6eb; --ok-tx: #006e25; --warn-bg: #fff4e0; --warn-tx: #8a4b00; --bad-bg: #fdeaea; --bad-tx: #b01c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1c1e; --surface: #242528; --text: #f7f7f8; --muted: #aeb0b6; --line: #37383c;
+      --brand: #4c8dff;
+      --st-plan: #8a8c93; --st-doing: #3385ff; --st-done: #1ed45a; --st-fix: #ff6363;
+      --ok-bg: #12301c; --ok-tx: #7df5a5; --warn-bg: #3a2a0c; --warn-tx: #ffc977; --bad-bg: #3d1515; --bad-tx: #ff9b9b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px; }
+  h1 { font-size: 26px; margin: 0; }
+  h2 { font-size: 18px; margin: 36px 0 12px; }
+  a { color: var(--brand); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 20px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile .label { color: var(--muted); font-size: 13px; }
+  .tile .value { font-size: 30px; font-weight: 700; line-height: 1.2; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .tile .sub { color: var(--muted); font-size: 13px; }
+  .bar { display: flex; gap: 2px; height: 28px; border-radius: 6px; overflow: hidden; margin: 8px 0 10px; }
+  .bar div { min-width: 6px; position: relative; cursor: default; }
+  .bar div:hover { filter: brightness(1.12); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+                         margin-right: 6px; background: var(--c); vertical-align: 0; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 14px; }
+  header > div { min-width: 0; }
+  .muted { overflow-wrap: anywhere; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th { color: var(--muted); font-weight: 600; background: var(--surface); white-space: nowrap; }
+  tr.fix td { background: color-mix(in srgb, var(--bad-bg) 55%, transparent); }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 13px; white-space: nowrap; border: 1px solid var(--line); }
+  .pill::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+  .res { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .res.ok { background: var(--ok-bg); color: var(--ok-tx); }
+  .res.warn { background: var(--warn-bg); color: var(--warn-tx); }
+  .res.bad { background: var(--bad-bg); color: var(--bad-tx); }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--line); vertical-align: -2px; margin-right: 6px; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 0.92em; }
+  .tip { position: fixed; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px;
+         padding: 6px 10px; border-radius: 6px; display: none; z-index: 10; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>디자인 현황판</h1>
+      <div class="muted">design MCP 와 같은 자료(screens.csv · design_tokens.csv)를 실시간으로 읽어요 · <span id="time"></span></div>
+    </div>
+    <a href="__MCP_URL__">← 사용법 · 설치 안내</a>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <h2>상태별 화면</h2>
+  <div class="bar" id="bar" role="img"></div>
+  <div class="legend" id="legend"></div>
+
+  <h2>화면 목록</h2>
+  <div class="table-wrap"><table id="screens"></table></div>
+
+  <h2>글자색 대비 점검 <span class="muted">(WCAG 2.1 · 본문 4.5 / 큰 글자 3.0)</span></h2>
+  <div class="table-wrap"><table id="contrast"></table></div>
+  <p class="muted">✓ 통과 = 본문 글자 OK · △ 큰 글자만 = 약 24px 이상(굵게 19px 이상)에만 사용 · ✕ 미달 = 글자로 쓰지 않기</p>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+  var DATA = __DATA__;
+  var STATUS = [
+    { key: "기획 중", c: "var(--st-plan)" },
+    { key: "진행 중", c: "var(--st-doing)" },
+    { key: "완료", c: "var(--st-done)" },
+    { key: "수정 필요", c: "var(--st-fix)" }
+  ];
+  var colorOf = {}; STATUS.forEach(function (s) { colorOf[s.key] = s.c; });
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  document.getElementById("time").textContent = "불러온 시각 " + DATA.generated;
+
+  // 숫자 카드
+  var p = DATA.progress, total = p["전체 화면"], counts = p["상태별"];
+  var tiles = [
+    { label: "전체 화면", value: total, sub: "screens.csv 기준" },
+    { label: "디자인 완료율", value: p["완료율"].split(" ")[0], sub: p["완료율"].split(" ")[1] + " 화면 완료" },
+    { label: "개발 넘김", value: p["개발 넘김"].split(" ")[0], sub: p["개발 넘김"].split(" ")[1] + " 화면 넘김" },
+    { label: "수정 필요", value: counts["수정 필요"] || 0, sub: "손봐야 할 화면" }
+  ];
+  document.getElementById("tiles").innerHTML = tiles.map(function (t) {
+    return '<div class="tile"><div class="label">' + esc(t.label) + '</div><div class="value">' + esc(t.value) +
+           '</div><div class="sub">' + esc(t.sub) + "</div></div>";
+  }).join("");
+
+  // 상태 막대 + 범례
+  var tip = document.getElementById("tip");
+  var bar = document.getElementById("bar");
+  bar.setAttribute("aria-label", STATUS.map(function (s) { return s.key + " " + (counts[s.key] || 0) + "개"; }).join(", "));
+  STATUS.forEach(function (s) {
+    var n = counts[s.key] || 0; if (!n) return;
+    var d = document.createElement("div");
+    d.style.flex = n; d.style.background = s.c;
+    d.onmousemove = function (e) {
+      tip.textContent = s.key + " · " + n + "개 (" + Math.round(n / total * 100) + "%)";
+      tip.style.display = "block"; tip.style.left = (e.clientX + 12) + "px"; tip.style.top = (e.clientY + 12) + "px";
+    };
+    d.onmouseleave = function () { tip.style.display = "none"; };
+    bar.appendChild(d);
+  });
+  document.getElementById("legend").innerHTML = STATUS.map(function (s) {
+    return '<span style="--c:' + s.c + '">' + s.key + " <b>" + (counts[s.key] || 0) + "</b></span>";
+  }).join("");
+
+  // 화면 목록 (수정 필요 → 진행 중 → 기획 중 → 완료 순)
+  var order = { "수정 필요": 0, "진행 중": 1, "기획 중": 2, "완료": 3 };
+  var rows = DATA.screens.slice().sort(function (a, b) { return (order[a["디자인 상태"]] ?? 9) - (order[b["디자인 상태"]] ?? 9); });
+  document.getElementById("screens").innerHTML =
+    "<tr><th>화면</th><th>디자인 상태</th><th>개발 넘김</th><th>쓰는 컴포넌트</th><th>메모</th></tr>" +
+    rows.map(function (r) {
+      var st = r["디자인 상태"];
+      return '<tr class="' + (st === "수정 필요" ? "fix" : "") + '"><td><b>' + esc(r["화면"]) + "</b></td>" +
+        '<td><span class="pill" style="--c:' + (colorOf[st] || "var(--muted)") + '">' + esc(st) + "</span></td>" +
+        "<td>" + (r["개발 넘김"] === "넘김" ? "✓ 넘김" : "대기") + "</td>" +
+        "<td>" + esc(r["쓰는 컴포넌트"]) + '</td><td class="muted">' + esc(r["메모"]) + "</td></tr>";
+    }).join("");
+
+  // 대비 표
+  function cell(c) {
+    if (!c) return "<td>-</td>";
+    var r = parseFloat(c.ratio);
+    var cls = r >= 4.5 ? "ok" : r >= 3 ? "warn" : "bad";
+    var mark = r >= 4.5 ? "✓ " : r >= 3 ? "△ " : "✕ ";
+    return '<td><span class="res ' + cls + '">' + mark + c.ratio + "</span></td>";
+  }
+  var cols = DATA.contrast_columns;
+  document.getElementById("contrast").innerHTML =
+    "<tr><th>글자색 토큰</th><th>쓰는 곳</th>" + cols.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") + "</tr>" +
+    DATA.contrast.map(function (row) {
+      return '<tr><td><span class="sw" style="background:' + esc(row.light) + '"></span><code>' + esc(row.name) + "</code></td>" +
+        '<td class="muted">' + esc(row.use) + "</td>" + row.cells.map(cell).join("") + "</tr>";
+    }).join("");
+</script>
+</body>
+</html>
