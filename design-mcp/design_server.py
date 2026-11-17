@@ -1,15 +1,22 @@
-"""디자인 MCP 서버 (읽기 전용)
+"""디자인 MCP 서버
 
 디자인 규칙(토큰 · 컴포넌트 · 상태 · 문구)과 화면 진행 상황을 Claude 가 찾아 쓰게 해 주는 MCP 예요.
-- 자료: 이 파일과 같은 폴더의 design_tokens.csv · screens.csv · docs/**/*.md
-- 도구 5개: 규칙 3개(토큰 찾기 · 가이드 보기 · 색 대비 검사) + 현황 2개(화면 보기 · 디자인 진행률)
-- 쓰기 · 지우기 · 파일 저장 기능은 일부러 없어요. 자료를 바꾸려면 사람이 파일을 고쳐 PR 로 올려요.
+- 자료: design_tokens.csv · docs/**/*.md (규칙, 읽기 전용) + 화면 상태 (Supabase 표 design_screens)
+- 도구 7개: 규칙 3개(토큰 찾기 · 가이드 보기 · 색 대비 검사)
+           + 현황 4개(화면 보기 · 디자인 진행률 · 화면 상태 바꾸기 · 화면 변경 기록)
+- 화면 상태만 도구로 바꿀 수 있어요. 바꾼 사람 · 시각 · 전후 값이 design_screen_history 에 남아요.
+  토큰 · 문서(규칙)는 여전히 사람이 파일을 고쳐 PR 로 올려요.
+- 환경 변수 SUPABASE_URL · SUPABASE_SECRET_KEY 가 없으면 screens.csv 를 읽고(읽기만), 상태 바꾸기는 꺼져요.
 - 실행: python design_server.py  (stdio 방식 — 실행하면 멈춰 있는 게 정상, Ctrl+C 로 종료)
 - 설치한 mcp 버전: 2.x (2.x 에서는 FastMCP 대신 MCPServer 를 써요)
 """
 
 import csv  # CSV(표) 파일 읽기
+import json  # Supabase 와 주고받는 데이터
+import os  # 환경 변수 (Supabase 주소 · 키)
 import re  # 색 값 모양 검사
+import urllib.error  # Supabase 호출 에러
+import urllib.request  # Supabase 호출 (추가 설치 없이 기본 라이브러리로)
 from pathlib import Path  # 파일 경로 다루기
 from typing import Annotated  # 도구 입력값에 설명 붙이기
 
@@ -26,15 +33,33 @@ DOCS_DIR = BASE / "docs"
 # 모든 도구에 붙일 표시: 읽기만 하고, 아무것도 바꾸지 않고, 바깥 인터넷도 안 씀
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
+# 화면 상태를 바꾸는 도구 표시: 바꾸긴 하지만 지우지 않고, 같은 값으로 다시 불러도 결과가 같음
+WRITES = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+
 # 화면 상태는 이 네 가지만 써요 (진행률 순서대로)
 STATUS_ORDER = ["기획 중", "진행 중", "완료", "수정 필요"]
+HANDOFF_VALUES = ["넘김", "대기"]
+
+# ── Supabase: 화면 상태를 저장하는 곳 ────────────────────────────────────────
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_SECRET_KEY", "").strip()  # 서버 전용 비밀 키 (절대 공개 금지)
+USE_DB = bool(SUPABASE_URL and SUPABASE_KEY)
+# 상태 바꾸기 허용 여부: 내 컴퓨터(stdio)는 허용, 원격(HTTP)은 접속 키(DESIGN_MCP_KEY)가 있을 때만 허용
+WRITE_ENABLED = True
+
+# DB 칸 이름 ↔ 지금까지 쓰던 한국어 칸 이름 (screens.csv · 대시보드와 같게)
+DB_TO_KO = {"name": "화면", "status": "디자인 상태", "handoff": "개발 넘김", "owner": "담당",
+            "components": "쓰는 컴포넌트", "tokens": "쓰는 토큰", "memo": "메모",
+            "updated_at": "마지막 수정", "updated_by": "수정한 사람"}
 
 mcp = MCPServer(
     name="design",
     instructions=(
-        "디자인 규칙과 화면 진행 상황을 알려 주는 읽기 전용 도구예요. "
+        "디자인 규칙과 화면 진행 상황을 알려 주는 도구예요. "
         "색 · 글자 · 간격은 find_tokens, 컴포넌트 · 상태 · 문구 규칙은 read_guide, "
         "글자색이 잘 보이는지는 check_contrast, 화면별 진행은 list_screens · design_progress 를 쓰세요. "
+        "화면 상태를 바꿀 때는 update_screen_status 를 쓰되, 부르기 전에 바꿀 내용(화면 · 전 → 후 · 바꾸는 사람)을 "
+        "사용자에게 보여 주고 승인받으세요. 바꾸는 사람은 사용자 본인이에요 — team MCP 가 있으면 whoami 로 확인하세요. "
         "자료에 없는 내용은 지어내지 말고 없다고 답하세요."
     ),
 )
@@ -52,6 +77,54 @@ def read_csv(path: Path) -> list[dict]:
 def squash(text: str) -> str:
     """띄어쓰기를 지우고 소문자로 — 「반납지연」 「반납 지연」을 같은 말로 보기 위해."""
     return re.sub(r"\s+", "", text).lower()
+
+
+class DBError(Exception):
+    """Supabase 가 에러를 돌려줬을 때 (사람이 읽을 메시지만 담아요 — 키는 절대 안 담아요)."""
+
+
+def supabase(method: str, path: str, body: dict | None = None):
+    """Supabase REST(PostgREST) 를 불러요. path 예: 'design_screens?select=*' · 'rpc/design_update_screen'"""
+    headers = {"apikey": SUPABASE_KEY, "Content-Type": "application/json", "Accept": "application/json"}
+    if SUPABASE_KEY.startswith("eyJ"):  # 예전 방식 service_role 키(JWT)는 Authorization 머리글도 필요해요
+        headers["Authorization"] = f"Bearer {SUPABASE_KEY}"
+    data = json.dumps(body, ensure_ascii=False).encode() if body is not None else None
+    req = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/{path}", data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as res:
+            raw = res.read()
+            return json.loads(raw) if raw else None
+    except urllib.error.HTTPError as e:
+        try:
+            msg = json.loads(e.read()).get("message", "")
+        except Exception:
+            msg = ""
+        raise DBError(msg or f"Supabase 응답 오류 ({e.code})") from None
+    except urllib.error.URLError as e:
+        raise DBError(f"Supabase 에 연결하지 못했어요 ({e.reason})") from None
+
+
+def to_ko(row: dict) -> dict:
+    """DB 한 줄을 한국어 칸 이름으로 바꿔요. 시각은 한국 시간 「YYYY-MM-DD HH:MM」 으로."""
+    from datetime import datetime, timedelta, timezone
+
+    out = {DB_TO_KO.get(k, k): ("" if v is None else v) for k, v in row.items() if k in DB_TO_KO}
+    if out.get("마지막 수정"):
+        t = datetime.fromisoformat(str(out["마지막 수정"]).replace("Z", "+00:00"))
+        out["마지막 수정"] = t.astimezone(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M")
+    return out
+
+
+def load_screens() -> list[dict]:
+    """화면 목록을 한국어 칸 이름으로 돌려줘요. Supabase 가 설정돼 있으면 DB, 아니면 screens.csv."""
+    if not USE_DB:
+        return read_csv(SCREENS_CSV)
+    return [to_ko(r) for r in supabase("GET", "design_screens?select=*&order=name")]
+
+
+def pick(value: str, allowed: list[str]) -> str | None:
+    """「수정필요」 「수정 필요」 처럼 띄어쓰기가 달라도 정해진 값으로 맞춰요. 없으면 None."""
+    return next((a for a in allowed if squash(a) == squash(value)), None)
 
 
 # ── 규칙 도구 1: 토큰 찾기 ──────────────────────────────────────────────────
@@ -222,11 +295,13 @@ def list_screens(
 ) -> dict:
     """화면 목록과 화면별 디자인 상태 · 개발 넘김 여부 · 쓰는 컴포넌트와 토큰 · 메모를 보여 줘요.
 
-    screens.csv 를 읽어요. 두 조건 모두 비우면 전체 화면이 나와요.
-    없는 상태를 넣으면 빈 목록이 나와요.
+    두 조건 모두 비우면 전체 화면이 나와요. 없는 상태를 넣으면 빈 목록이 나와요.
     「수정 필요한 화면은?」 「개발이 가져갈 수 있는 화면(넘김)은?」 「차량 예약 화면 어디까지 됐어?」 같은 질문에 쓰세요.
     """
-    rows = read_csv(SCREENS_CSV)
+    try:
+        rows = load_screens()
+    except DBError as e:
+        return {"오류": str(e)}
     s, h = squash(status), squash(handoff)
     found = [
         r for r in rows
@@ -240,14 +315,17 @@ def list_screens(
 def design_progress() -> dict:
     """디자인이 전체적으로 어디까지 됐는지 숫자로 보여 줘요.
 
-    screens.csv 의 전체 화면 수, 상태별(기획 중 · 진행 중 · 완료 · 수정 필요) 개수,
+    전체 화면 수, 상태별(기획 중 · 진행 중 · 완료 · 수정 필요) 개수,
     완료율(완료 ÷ 전체), 개발 넘김 비율, 그리고 손봐야 할 화면(수정 필요 · 진행 중) 목록을 돌려줘요.
     「디자인 몇 % 됐어?」 「주간 보고용 디자인 현황」 같은 질문에 쓰세요.
     """
-    rows = read_csv(SCREENS_CSV)
+    try:
+        rows = load_screens()
+    except DBError as e:
+        return {"오류": str(e)}
     total = len(rows)
     if total == 0:
-        return {"안내": "screens.csv 에 화면이 없어요."}
+        return {"안내": "등록된 화면이 없어요."}
 
     counts = {st: 0 for st in STATUS_ORDER}
     for r in rows:
@@ -268,6 +346,92 @@ def design_progress() -> dict:
             for r in rows if r.get("디자인 상태") in ("수정 필요", "진행 중")
         ],
     }
+
+
+# ── 현황 도구 3: 화면 상태 바꾸기 ───────────────────────────────────────────
+@mcp.tool(name="update_screen_status", title="화면 상태 바꾸기", annotations=WRITES)
+def update_screen_status(
+    screen: Annotated[str, Field(description="화면 이름 (list_screens 의 「화면」). 띄어쓰기는 달라도 돼요")],
+    changed_by: Annotated[str, Field(description="바꾸는 사람 아이디나 이름 (사용자 본인)")],
+    status: Annotated[str, Field(description="새 디자인 상태: 기획 중 · 진행 중 · 완료 · 수정 필요. 안 바꾸면 비워요")] = "",
+    handoff: Annotated[str, Field(description="새 개발 넘김: 넘김 · 대기. 안 바꾸면 비워요")] = "",
+    memo: Annotated[str, Field(description="화면 메모를 이 글로 바꿔요 (예: 수정 필요 이유). 안 바꾸면 비워요")] = "",
+    note: Annotated[str, Field(description="변경 기록에 남길 한 줄 설명 (예: 대비 고쳐서 완료)")] = "",
+) -> dict:
+    """화면의 디자인 상태 · 개발 넘김 · 메모를 바꾸고, 누가 언제 무엇을 바꿨는지 기록에 남겨요.
+
+    부르기 전에 바꿀 내용(화면 · 전 → 후 · 바꾸는 사람)을 사용자에게 보여 주고 승인받으세요.
+    「요약 바 수정 끝났어, 완료로 넘겨 줘」 「차량 예약 화면 진행 중으로 바꿔 줘」 같은 요청에 쓰세요.
+    """
+    if not USE_DB:
+        return {"오류": "상태 저장소(Supabase)가 설정되지 않아 바꿀 수 없어요. screens.csv 를 직접 고쳐 주세요."}
+    if not WRITE_ENABLED:
+        return {"오류": "이 원격 서버는 접속 키(DESIGN_MCP_KEY) 없이 공개돼 있어 상태 바꾸기가 꺼져 있어요."}
+    if not changed_by.strip():
+        return {"오류": "바꾸는 사람(changed_by)을 적어 주세요."}
+
+    new_status = pick(status, STATUS_ORDER) if status.strip() else None
+    if status.strip() and not new_status:
+        return {"오류": f"「{status}」은(는) 없는 상태예요. 쓸 수 있는 값: {' · '.join(STATUS_ORDER)}"}
+    new_handoff = pick(handoff, HANDOFF_VALUES) if handoff.strip() else None
+    if handoff.strip() and not new_handoff:
+        return {"오류": f"「{handoff}」은(는) 없는 값이에요. 쓸 수 있는 값: {' · '.join(HANDOFF_VALUES)}"}
+    if not (new_status or new_handoff or memo.strip()):
+        return {"오류": "바꿀 내용(status · handoff · memo 중 하나 이상)을 적어 주세요."}
+
+    try:
+        rows = load_screens()
+        target = next((r for r in rows if squash(r["화면"]) == squash(screen)), None)
+        if not target:
+            return {"오류": f"「{screen}」 화면이 없어요.", "화면 목록": [r["화면"] for r in rows]}
+        after = supabase("POST", "rpc/design_update_screen", {
+            "p_name": target["화면"], "p_by": changed_by.strip(), "p_status": new_status,
+            "p_handoff": new_handoff, "p_memo": memo.strip() or None, "p_note": note.strip(),
+        })
+    except DBError as e:
+        return {"오류": str(e)}
+
+    after = to_ko(after)
+    changes = [
+        f"{k}: {target.get(k, '')} → {after.get(k, '')}"
+        for k in ("디자인 상태", "개발 넘김", "메모") if target.get(k, "") != after.get(k, "")
+    ]
+    return {"화면": after["화면"], "바뀐 것": changes or ["(이미 같은 값이라 바뀐 게 없어요)"], "지금": after}
+
+
+# ── 현황 도구 4: 화면 변경 기록 ─────────────────────────────────────────────
+@mcp.tool(name="screen_history", title="화면 변경 기록", annotations=READ_ONLY)
+def screen_history(
+    screen: Annotated[str, Field(description="화면 이름. 비우면 전체 화면의 최근 기록")] = "",
+    limit: Annotated[int, Field(description="최근 몇 건 (기본 20, 최대 100)")] = 20,
+) -> dict:
+    """화면 상태가 언제 · 누구에 의해 · 무엇에서 무엇으로 바뀌었는지 최근 기록을 보여 줘요.
+
+    「요약 바 누가 완료로 바꿨어?」 「이번 주 디자인 상태 바뀐 것」 같은 질문에 쓰세요.
+    """
+    if not USE_DB:
+        return {"안내": "상태 저장소(Supabase)가 설정되지 않아 기록이 없어요. screens.csv 변경은 git 기록을 보세요."}
+    from urllib.parse import quote
+
+    limit = max(1, min(int(limit or 20), 100))
+    try:
+        path = f"design_screen_history?select=*&order=changed_at.desc&limit={limit}"
+        if screen.strip():
+            name = next((r["화면"] for r in load_screens() if squash(r["화면"]) == squash(screen)), None)
+            if not name:
+                return {"오류": f"「{screen}」 화면이 없어요."}
+            path += f"&screen=eq.{quote(name)}"
+        rows = supabase("GET", path)
+    except DBError as e:
+        return {"오류": str(e)}
+
+    out = []
+    for r in rows:
+        when = to_ko({"updated_at": r["changed_at"]})["마지막 수정"]
+        out.append({"시각": when, "화면": r["screen"], "항목": r["field"],
+                    "전 → 후": f"{r['old_value'] or ''} → {r['new_value'] or ''}",
+                    "바꾼 사람": r["changed_by"], "설명": r["note"]})
+    return {"화면": screen or "(전체)", "개수": len(out), "기록": out}
 
 
 # ── 대시보드: 같은 자료로 진행 현황 · 대비 점검을 한 화면에 ─────────────────────
@@ -303,7 +467,7 @@ def dashboard_page(mcp_url: str) -> str:
         "colors": colors,
         "generated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M (KST)"),
         "progress": design_progress(),
-        "screens": read_csv(SCREENS_CSV),
+        "screens": list_screens().get("화면", []),
         "contrast_columns": columns,
         "contrast": contrast,
     }
@@ -322,12 +486,13 @@ def http_app():
     - 비어 있으면 주소를 아는 누구나 읽을 수 있어요 (읽기 전용이라 바뀌는 건 없어요).
     """
     import hmac
-    import os
     from urllib.parse import parse_qs
 
+    global WRITE_ENABLED
     # 서버 여러 대가 번갈아 받아도 되게: 대화 기억 없이(stateless) JSON 으로 바로 답해요
     inner = mcp.streamable_http_app(stateless_http=True, json_response=True, host="0.0.0.0")
     key = os.environ.get("DESIGN_MCP_KEY", "").strip()
+    WRITE_ENABLED = bool(key)  # 공개 주소(키 없음)에서는 아무나 상태를 바꾸지 못하게 꺼요
 
     async def app(scope, receive, send):
         # 사람이 브라우저로 주소를 열면 → 사용법 안내 페이지 (guide.html) 를 보여 줘요

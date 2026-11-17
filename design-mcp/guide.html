@@ -47,7 +47,7 @@
 <main>
   <span class="badge">● 서버 작동 중</span>
   <h1>design MCP 사용법</h1>
-  <p class="lead">Claude 에게 우리 팀 <b>디자인 규칙</b>(색 · 글자 · 컴포넌트 · 문구)과 <b>화면 진행 상황</b>을 물어볼 수 있게 해 주는 도구예요. 읽기 전용이라 누가 써도 자료가 바뀌지 않아요.</p>
+  <p class="lead">Claude 에게 우리 팀 <b>디자인 규칙</b>(색 · 글자 · 컴포넌트 · 문구)과 <b>화면 진행 상황</b>을 물어볼 수 있게 해 주는 도구예요. 규칙은 읽기만 하고, 화면 상태는 담당자가 말로 바꿀 수 있어요 (누가 바꿨는지 기록에 남아요).</p>
 
   <div class="notice">
     📊 디자인 진행 현황은 <a href="/dashboard">디자인 현황판</a>에서 한눈에 볼 수 있어요.<br>
@@ -105,11 +105,11 @@
   <details><summary>/mcp 에서 design 이 failed 로 나와요</summary>
     <p>주소를 정확히 붙여 넣었는지 확인하고(끝이 <code>/mcp</code>), Claude Code 를 껐다 켜 보세요. 회사 · 학교 네트워크가 외부 주소를 막는 경우도 있어요.</p></details>
   <details><summary>자료는 어디서 바꾸나요?</summary>
-    <p>GitHub 레포 <code>mugee1/mcp-practice</code> 의 <code>design-mcp/</code> 폴더(<code>design_tokens.csv</code> · <code>screens.csv</code> · <code>docs/</code>)를 고쳐 main 에 올리면 몇 분 안에 모두에게 반영돼요. 도구로는 바꿀 수 없어요.</p></details>
+    <p>GitHub 레포 <code>mugee1/mcp-practice</code> 의 <code>design-mcp/</code> 폴더(<code>design_tokens.csv</code> · <code>screens.csv</code> · <code>docs/</code>)를 고쳐 main 에 올리면 몇 분 안에 모두에게 반영돼요. 화면 상태는 Claude 에게 말로 바꿔요.</p></details>
   <details><summary>답에 자료에 없는 내용이 나오면?</summary>
     <p>이 도구는 자료에 없는 건 「없다」고 답하게 되어 있어요. 그래도 이상한 답이 나오면 디자인 담당에게 알려 주세요.</p></details>
   <details><summary>아무나 이 주소를 써도 되나요?</summary>
-    <p>지금은 공개 · 읽기 전용이에요. 연습용 자료만 들어 있어요. 공개하면 안 되는 자료를 넣게 되면 접속 키를 켤 예정이에요.</p></details>
+    <p>화면 상태를 바꿀 수 있어서 접속 키가 있는 사람만 써요. 주소 뒤에 ?key=키 를 붙여 등록하세요 (키는 담당자에게 받기).</p></details>
 
   <p class="muted" style="margin-top:40px">주소: <code>__URL__</code></p>
 </main>
