@@ -34,11 +34,11 @@ Claude 에게 **우리 팀 디자인 규칙**(색 · 글자 · 컴포넌트 · �
 
 ## 팀원 설치 (원격 — 설치할 것 없음)
 
-서버는 Vercel 에 올라가 있어요. 주소: `https://<배포 주소>/mcp` (공개 · 읽기 전용)
+서버는 Vercel 에 올라가 있어요. 주소: `https://design-mcp-tau.vercel.app/mcp` (공개 · 읽기 전용)
 
 **Claude Code** — 아무 폴더에서 한 줄:
 ```
-claude mcp add --transport http --scope user design https://<배포 주소>/mcp
+claude mcp add --transport http --scope user design https://design-mcp-tau.vercel.app/mcp
 /mcp        # design 이 connected 면 성공
 ```
 
