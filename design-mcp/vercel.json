@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/index.py": { "includeFiles": "{design_server.py,design_tokens.csv,screens.csv,docs/**}" }
+    "api/index.py": { "includeFiles": "{design_server.py,guide.html,design_tokens.csv,screens.csv,docs/**}" }
   },
   "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
 }

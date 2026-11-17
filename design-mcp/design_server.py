@@ -288,6 +288,19 @@ def http_app():
     key = os.environ.get("DESIGN_MCP_KEY", "").strip()
 
     async def app(scope, receive, send):
+        # 사람이 브라우저로 주소를 열면 → 사용법 안내 페이지 (guide.html) 를 보여 줘요
+        if scope["type"] == "http" and scope.get("method") == "GET":
+            headers = dict(scope.get("headers") or [])
+            accept = headers.get(b"accept", b"").decode().lower()
+            if "text/html" in accept and "text/event-stream" not in accept:
+                host = headers.get(b"host", b"").decode()
+                proto = headers.get(b"x-forwarded-proto", b"").decode() or ("http" if host.startswith(("127.", "localhost")) else "https")
+                page = (BASE / "guide.html").read_text(encoding="utf-8").replace("__URL__", f"{proto}://{host}/mcp")
+                await send({"type": "http.response.start", "status": 200,
+                            "headers": [(b"content-type", b"text/html; charset=utf-8")]})
+                await send({"type": "http.response.body", "body": page.encode()})
+                return
+
         if key and scope["type"] == "http":
             headers = dict(scope.get("headers") or [])
             auth = headers.get(b"authorization", b"").decode()

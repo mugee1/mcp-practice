@@ -36,6 +36,8 @@ Claude 에게 **우리 팀 디자인 규칙**(색 · 글자 · 컴포넌트 · �
 
 서버는 Vercel 에 올라가 있어요. 주소: `https://design-mcp-tau.vercel.app/mcp` (공개 · 읽기 전용)
 
+📘 쉬운 사용 안내: [사용법.md](사용법.md) (주소를 브라우저로 열어도 같은 안내가 나와요)
+
 **Claude Code** — 아무 폴더에서 한 줄:
 ```
 claude mcp add --transport http --scope user design https://design-mcp-tau.vercel.app/mcp

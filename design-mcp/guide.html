@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>design MCP 사용법</title>
+<style>
+  :root {
+    --bg: #ffffff; --surface: #f7f7f8; --text: #171719; --muted: #5a5c63;
+    --line: #e1e2e4; --brand: #0066ff; --ok: #006e25; --code-bg: #f1f2f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1c1e; --surface: #242528; --text: #f7f7f8; --muted: #aeb0b6;
+      --line: #37383c; --brand: #4c8dff; --ok: #1ed45a; --code-bg: #2a2b2e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  h2 { font-size: 20px; margin: 40px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+  p { margin: 8px 0; }
+  .lead { color: var(--muted); }
+  .badge { display: inline-block; font-size: 13px; padding: 2px 10px; border-radius: 999px;
+           background: var(--surface); color: var(--ok); border: 1px solid var(--line); }
+  .notice { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 12px 0; }
+  .step h3 { margin: 0 0 6px; font-size: 17px; }
+  .code { position: relative; background: var(--code-bg); border-radius: 8px; padding: 12px 84px 12px 12px; margin: 8px 0;
+          font: 14px/1.5 ui-monospace, Consolas, monospace; overflow-x: auto; white-space: pre; }
+  .copy { position: absolute; top: 8px; right: 8px; font: 13px sans-serif; padding: 4px 10px; border-radius: 6px;
+          border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 0.92em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">● 서버 작동 중</span>
+  <h1>design MCP 사용법</h1>
+  <p class="lead">Claude 에게 우리 팀 <b>디자인 규칙</b>(색 · 글자 · 컴포넌트 · 문구)과 <b>화면 진행 상황</b>을 물어볼 수 있게 해 주는 도구예요. 읽기 전용이라 누가 써도 자료가 바뀌지 않아요.</p>
+
+  <div class="notice">
+    👀 <b>이 페이지가 보인다면 정상이에요.</b> 이 주소는 웹사이트가 아니라 Claude 에 등록해서 쓰는 주소예요.
+    아래 방법으로 Claude 에 한 번만 등록하면 돼요.
+  </div>
+
+  <h2>1. 설치 — 한 번만 하면 돼요</h2>
+
+  <div class="step">
+    <h3>Claude Code (터미널) 를 쓰는 경우</h3>
+    <p>아무 폴더에서나 아래 한 줄을 붙여 넣으세요. Python 같은 설치는 필요 없어요.</p>
+    <div class="code" data-copy>claude mcp add --transport http --scope user design __URL__</div>
+    <p>그다음 Claude Code 안에서 <code>/mcp</code> 를 입력해 <b>design · connected</b> 가 보이면 끝이에요.</p>
+  </div>
+
+  <div class="step">
+    <h3>claude.ai (웹 · 데스크톱 앱) 를 쓰는 경우</h3>
+    <p>설정의 <b>커넥터</b> 메뉴에서 <b>사용자 지정 커넥터 추가</b>를 누르고, 이름은 <code>design</code>, 주소는 아래를 붙여 넣으세요.</p>
+    <div class="code" data-copy>__URL__</div>
+    <p class="muted">대화창의 도구 목록에서 design 이 켜져 있는지 확인하세요.</p>
+  </div>
+
+  <h2>2. 이렇게 물어보세요</h2>
+  <p>도구 이름을 몰라도 돼요. 평소 말로 물어보면 Claude 가 알아서 골라 써요.</p>
+  <table>
+    <tr><th>알고 싶은 것</th><th>이렇게 물어보기</th></tr>
+    <tr><td>색 · 글자 · 간격 값</td><td>「경고 색 토큰 알려 줘」 「요약 카드 배경색은?」</td></tr>
+    <tr><td>컴포넌트 · 문구 규칙</td><td>「버튼은 언제 써?」 「반납 지연은 어떻게 보여 줘?」 「오류 문구 규칙」</td></tr>
+    <tr><td>글자가 잘 보이는지</td><td>「positive.primary 글자를 요약 카드 배경에 써도 돼?」</td></tr>
+    <tr><td>화면 진행 상황</td><td>「수정 필요한 화면은?」 「개발에 넘어온 화면은?」</td></tr>
+    <tr><td>전체 진행률</td><td>「디자인 몇 % 됐어?」 「주간 보고용 디자인 현황 정리해 줘」</td></tr>
+  </table>
+
+  <h2>3. 역할별로 이렇게 써요</h2>
+  <table>
+    <tr><th>누가</th><th>예시</th></tr>
+    <tr><td>디자이너</td><td>「수정 필요한 화면과 이유, 관련 토큰 대비를 보여 줘」</td></tr>
+    <tr><td>개발자</td><td>「개발에 넘어온 화면과 각 화면의 컴포넌트 규칙을 정리해 줘」</td></tr>
+    <tr><td>PO · 기획</td><td>「디자인 진행률을 주간 보고 형식으로 정리해 줘」</td></tr>
+    <tr><td>리뷰어</td><td>「이 화면 코드에 토큰에 없는 색이나 대비 부족이 있는지 봐 줘」</td></tr>
+  </table>
+
+  <h2>4. 들어 있는 도구 5개</h2>
+  <table>
+    <tr><th>도구</th><th>하는 일</th></tr>
+    <tr><td><code>find_tokens</code></td><td>디자인 토큰(색 · 글자 · 간격 · 모서리 · 선) 찾기</td></tr>
+    <tr><td><code>read_guide</code></td><td>컴포넌트 · 상태 표현 · 문구 규칙 문서 보기</td></tr>
+    <tr><td><code>check_contrast</code></td><td>글자색 · 배경색 대비를 WCAG 기준으로 검사</td></tr>
+    <tr><td><code>list_screens</code></td><td>화면별 디자인 상태 · 개발 넘김 여부 보기</td></tr>
+    <tr><td><code>design_progress</code></td><td>전체 디자인 진행률 계산</td></tr>
+  </table>
+
+  <h2>5. 자주 묻는 질문</h2>
+  <details><summary>/mcp 에서 design 이 failed 로 나와요</summary>
+    <p>주소를 정확히 붙여 넣었는지 확인하고(끝이 <code>/mcp</code>), Claude Code 를 껐다 켜 보세요. 회사 · 학교 네트워크가 외부 주소를 막는 경우도 있어요.</p></details>
+  <details><summary>자료는 어디서 바꾸나요?</summary>
+    <p>GitHub 레포 <code>mugee1/mcp-practice</code> 의 <code>design-mcp/</code> 폴더(<code>design_tokens.csv</code> · <code>screens.csv</code> · <code>docs/</code>)를 고쳐 main 에 올리면 몇 분 안에 모두에게 반영돼요. 도구로는 바꿀 수 없어요.</p></details>
+  <details><summary>답에 자료에 없는 내용이 나오면?</summary>
+    <p>이 도구는 자료에 없는 건 「없다」고 답하게 되어 있어요. 그래도 이상한 답이 나오면 디자인 담당에게 알려 주세요.</p></details>
+  <details><summary>아무나 이 주소를 써도 되나요?</summary>
+    <p>지금은 공개 · 읽기 전용이에요. 연습용 자료만 들어 있어요. 공개하면 안 되는 자료를 넣게 되면 접속 키를 켤 예정이에요.</p></details>
+
+  <p class="muted" style="margin-top:40px">주소: <code>__URL__</code></p>
+</main>
+<script>
+  document.querySelectorAll("[data-copy]").forEach(function (el) {
+    var text = el.textContent;
+    var btn = document.createElement("button");
+    btn.className = "copy"; btn.type = "button"; btn.textContent = "복사";
+    btn.onclick = function () {
+      try {
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "복사됨"; setTimeout(function () { btn.textContent = "복사"; }, 1500);
+        });
+      } catch (e) {}
+    };
+    el.appendChild(btn);
+  });
+</script>
+</body>
+</html>
