@@ -270,6 +270,48 @@ def design_progress() -> dict:
     }
 
 
+# ── 원격(HTTP) 실행: 주소 하나로 여러 사람이 같이 써요 ──────────────────────────
+def http_app():
+    """인터넷 주소(/mcp)로 접속하는 웹 앱을 만들어요. Vercel 같은 곳에 올릴 때 써요.
+
+    - 환경 변수 DESIGN_MCP_KEY 가 있으면 그 키를 아는 사람만 쓸 수 있어요.
+      키는 「Authorization: Bearer 키」 머리글이나 주소 뒤 「?key=키」 로 보내요.
+      (claude.ai 커넥터는 머리글을 못 넣어서 ?key= 방식을 써요)
+    - 비어 있으면 주소를 아는 누구나 읽을 수 있어요 (읽기 전용이라 바뀌는 건 없어요).
+    """
+    import hmac
+    import os
+    from urllib.parse import parse_qs
+
+    # 서버 여러 대가 번갈아 받아도 되게: 대화 기억 없이(stateless) JSON 으로 바로 답해요
+    inner = mcp.streamable_http_app(stateless_http=True, json_response=True, host="0.0.0.0")
+    key = os.environ.get("DESIGN_MCP_KEY", "").strip()
+
+    async def app(scope, receive, send):
+        if key and scope["type"] == "http":
+            headers = dict(scope.get("headers") or [])
+            auth = headers.get(b"authorization", b"").decode()
+            given = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+            if not given:
+                given = parse_qs(scope.get("query_string", b"").decode()).get("key", [""])[0]
+            if not hmac.compare_digest(given.encode(), key.encode()):
+                await send({"type": "http.response.start", "status": 401,
+                            "headers": [(b"content-type", b"application/json; charset=utf-8")]})
+                await send({"type": "http.response.body",
+                            "body": '{"error": "접속 키가 없거나 틀렸어요."}'.encode()})
+                return
+        await inner(scope, receive, send)  # 키 검사를 통과하면 MCP 서버로 넘겨요
+
+    return app
+
+
 # ── 실행 ───────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    mcp.run()  # 기본 stdio: Claude Code 가 이 프로그램을 켜고 표준 입출력으로 대화해요
+    import sys
+
+    if "--http" in sys.argv:  # python design_server.py --http → http://127.0.0.1:8000/mcp
+        import uvicorn
+
+        uvicorn.run(http_app(), host="127.0.0.1", port=8000)
+    else:
+        mcp.run()  # 기본 stdio: Claude Code 가 이 프로그램을 켜고 표준 입출력으로 대화해요

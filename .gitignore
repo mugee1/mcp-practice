@@ -1,2 +1,6 @@
 # 별도 저장소(github.com/mugee1/carsystem)로 관리하는 폴더
 carsystem/
+
+# design MCP 원격 접속 키 (공유 금지)
+design-mcp/.design-mcp-key
+__pycache__/
