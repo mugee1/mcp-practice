@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "design": {
+    "design-local": {
       "command": "python",
       "args": ["design-mcp/design_server.py"]
     }

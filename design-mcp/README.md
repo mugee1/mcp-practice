@@ -80,11 +80,11 @@ claude mcp add --transport http --scope user design https://design-mcp-tau.verce
 
 ```
 pip install mcp                       # 처음 한 번 (mcp 2.x)
-claude                                # 수업 폴더 맨 위에서 실행 → 「design MCP 서버를 쓸까요?」 허용
-/mcp                                  # design 이 connected 인지 확인
+claude                                # 수업 폴더 맨 위에서 실행 → 「design-local MCP 서버를 쓸까요?」 허용
+/mcp                                  # design-local 이 connected 인지 확인
 ```
 
-연결 설정은 수업 폴더 맨 위 `.mcp.json` 에 있어요.
+연결 설정은 수업 폴더 맨 위 `.mcp.json` 에 있어요. 이름이 `design-local` 인 이유: 원격 `design`(키 · Supabase 연결)과 이름이 겹치면 이 폴더에서 로컬 버전이 우선돼 버려요. 로컬 버전은 Supabase 환경 변수가 없으면 screens.csv 를 읽기만 해요.
 
 직접 시험해 보기 (브라우저 화면에서 도구를 눌러 볼 수 있어요):
 ```
@@ -113,6 +113,6 @@ npx @modelcontextprotocol/inspector python design-mcp/design_server.py
 
 ## 2차 프로젝트로 옮길 때
 1. `design-mcp/` 폴더를 팀 레포로 복사
-2. `screens.csv` → 새 서비스 화면 목록, `design_tokens.csv` · `docs/` → 새 디자인 시스템으로 교체
+2. 새 Supabase 프로젝트에 `supabase.sql` 실행 (맨 아래 화면 목록을 새 서비스 화면으로), `design_tokens.csv` · `docs/` → 새 디자인 시스템으로 교체
 3. `design_server.py` 는 그대로 (서비스 이름이 코드에 없어요)
-4. 팀 레포 `.mcp.json` 에 `"design": { "command": "python", "args": ["design-mcp/design_server.py"] }` 추가
+4. (로컬 시험용) 팀 레포 `.mcp.json` 에 `"design-local": { "command": "python", "args": ["design-mcp/design_server.py"] }` 추가
