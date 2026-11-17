@@ -41,7 +41,8 @@ STATUS_ORDER = ["기획 중", "진행 중", "완료", "수정 필요"]
 HANDOFF_VALUES = ["넘김", "대기"]
 
 # ── Supabase: 화면 상태를 저장하는 곳 ────────────────────────────────────────
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+# 주소 끝에 /rest/v1 을 붙여 넣어도 되게 떼어 내요 (코드가 직접 붙여요)
+SUPABASE_URL = re.sub(r"/rest/v1/?$", "", os.environ.get("SUPABASE_URL", "").strip().rstrip("/"))
 SUPABASE_KEY = os.environ.get("SUPABASE_SECRET_KEY", "").strip()  # 서버 전용 비밀 키 (절대 공개 금지)
 USE_DB = bool(SUPABASE_URL and SUPABASE_KEY)
 # 상태 바꾸기 허용 여부: 내 컴퓨터(stdio)는 허용, 원격(HTTP)은 접속 키(DESIGN_MCP_KEY)가 있을 때만 허용
