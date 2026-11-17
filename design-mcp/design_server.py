@@ -300,6 +300,9 @@ def http_app():
                 await send({"type": "http.response.body",
                             "body": '{"error": "접속 키가 없거나 틀렸어요."}'.encode()})
                 return
+        if scope["type"] == "http":
+            # Vercel 은 주소를 /api/index 로 바꿔 넘기기도 해요 → 어느 경로든 MCP 입구(/mcp)로 보내요
+            scope = {**scope, "path": "/mcp", "raw_path": b"/mcp"}
         await inner(scope, receive, send)  # 키 검사를 통과하면 MCP 서버로 넘겨요
 
     return app
