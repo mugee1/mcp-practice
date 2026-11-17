@@ -1,0 +1,9 @@
+화면,디자인 상태,개발 넘김,담당,쓰는 컴포넌트,쓰는 토큰,메모
+요약 바,수정 필요,넘김,디자인,카드,positive.primary · brand.primary · negative.strong · neutral.tertiary · background.neutral.secondary,「사용가능」 초록 숫자가 요약 카드 배경에서 대비 미달 - 글자색 교체 검토
+지금 사용중 목록,완료,넘김,디자인,카드 · 상태 배지 · 버튼,brand.primary · negative.strong · line.negative.primary · line.neutral.primary,
+전체 차량 목록,수정 필요,넘김,디자인,검색창 · 필터 · 상태 배지 · 버튼,brand.primary · positive.primary · neutral.tertiary · line.neutral.secondary,빈 상태 안내 문구가 neutral.tertiary라 본문 대비 미달
+빌리기 창,완료,넘김,디자인,팝업 창 · 입력창 · 안내 메시지,brand.primary · negative.strong,
+반납 창,완료,넘김,디자인,팝업 창 · 입력창,brand.primary · negative.strong,
+앱 아이콘 (PWA),완료,넘김,디자인,-,brand.primary · positive.primary,11/17 작업 - 안드로이드 · iOS · 파비콘
+다크 모드 점검,진행 중,대기,디자인,전체,다크 값 전체,[연습용 가짜 항목] 다크 모드 대비 확인 중
+차량 예약 화면,기획 중,대기,디자인,미정,미정,[연습용 가짜 항목] 미리 예약 기능 - PRD 확정 전

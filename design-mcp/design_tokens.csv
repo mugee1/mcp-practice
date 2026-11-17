@@ -1,0 +1,23 @@
+이름,종류,라이트,다크,쓰는 곳,규칙
+brand.primary,색,#0066FF,#3385FF,주요 버튼 · 「사용중」 상태 · 숫자 강조,한 화면의 주요 행동에만 쓰기
+positive.primary,색,#00BF40,#1ED45A,「사용가능」 상태 · 실시간 연결 표시,흰 배경 위 글자로 쓰면 대비 부족 - 배지 배경과 함께 쓰거나 green-30 사용
+negative.strong,색,#E52222,#FF6363,「반납 지연」 상태 · 오류 문구,경고에만 쓰기 · 장식으로 쓰지 않기
+neutral.primary,글자색,#171719,#F7F7F8,본문 · 제목,기본 글자색
+neutral.secondary,글자색,#2E2F33E0,#C2C4C8E0,보조 정보 (번호판 · 위치 줄),본문 다음 단계 정보
+neutral.tertiary,글자색,#37383C9C,#AEB0B69C,개수 · 빈 상태 안내 · 갱신 시각,흰 배경 본문 대비 미달 - 꼭 읽어야 하는 문장에는 쓰지 않기
+background.neutral.primary,배경,#FFFFFF,#1B1C1E,페이지 · 카드 기본 배경,
+background.neutral.secondary,배경,#F7F7F8,#0F0F10,요약 카드 배경,
+surface.positive.primary,배경,#00BF4014,#1ED45A14,「사용가능」 배지 배경,positive 글자와 짝으로 쓰기
+line.neutral.primary,선,#70737C38,#70737C52,카드 테두리,
+line.neutral.secondary,선,#70737C29,#70737C47,목록 구분선,
+line.negative.primary,선,#FF42426E,#FF63636E,반납 지연 카드 테두리,반납 지연에만 쓰기
+atomic.green-30,참고 팔레트,#006E25,#006E25,초록 글자 대비 보완용 후보,positive 글자가 대비 미달일 때 대신 쓸 후보 (팀 합의 필요)
+space,간격,4 · 8 · 12 · 16 · 24 · 32px,같음,요소 사이 8~12 · 카드 안쪽 12~16 · 구역 사이 32,4의 배수만 쓰기
+radius.card,모서리,12px,같음,카드 · 요약 칸,
+type.title2,글자,title2 굵게,같음,화면 제목 (🚗 차량 배차판),화면에 1개
+type.headline2,글자,headline2 굵게,같음,구역 제목 (지금 사용중 · 전체 차량),
+type.title3,글자,title3 굵게,같음,요약 숫자 (N대),
+type.body1,글자,body1,같음,목록 주요 정보 (차종 · 번호판),
+type.body2,글자,body2,같음,빈 상태 안내 · 보조 본문,
+type.label1,글자,label1,같음,목록 보조 줄 · 입력창 아래 안내,
+type.caption1,글자,caption1,같음,실시간 표시 · 마지막 갱신 시각,가장 작은 글자 - 중요한 내용에 쓰지 않기
