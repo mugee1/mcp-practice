@@ -32,7 +32,25 @@ Claude 에게 **우리 팀 디자인 규칙**(색 · 글자 · 컴포넌트 · �
 - `screens.csv` 의 「다크 모드 점검」 「차량 예약 화면」은 **연습용 가짜 항목**이에요.
 - 파일을 고친 뒤에는 Claude Code 를 껐다 켜지 않아도 돼요 — 도구가 물어볼 때마다 파일을 새로 읽어요.
 
-## 연결 · 실행
+## 팀원 설치 (원격 — 설치할 것 없음)
+
+서버는 Vercel 에 올라가 있어요. 주소: `https://<배포 주소>/mcp` (공개 · 읽기 전용)
+
+**Claude Code** — 아무 폴더에서 한 줄:
+```
+claude mcp add --transport http --scope user design https://<배포 주소>/mcp
+/mcp        # design 이 connected 면 성공
+```
+
+**claude.ai 웹 · 데스크톱 앱** — 설정 → 커넥터 → 「사용자 지정 커넥터 추가」 → 이름 `design`, 주소에 위 URL 붙여 넣기.
+
+> 자료(CSV · docs)를 고쳐 main 에 푸시하면 Vercel 이 자동으로 다시 배포해서 모두에게 바로 반영돼요.
+
+### 운영 메모 (담당자용)
+- 지금은 누구나 읽을 수 있어요. 공개하면 안 되는 자료를 넣게 되면 Vercel 프로젝트 `design-mcp` 에 환경 변수 `DESIGN_MCP_KEY` 를 넣고 다시 배포하세요 → 주소 뒤에 `?key=키` 를 붙인 사람만 쓸 수 있어요.
+- 내 컴퓨터에서 원격 방식 시험: `python design-mcp/design_server.py --http` → `http://127.0.0.1:8000/mcp`
+
+## 연결 · 실행 (로컬 — 레포를 내려받아 쓸 때)
 
 ```
 pip install mcp                       # 처음 한 번 (mcp 2.x)
